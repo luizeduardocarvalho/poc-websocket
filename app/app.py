@@ -1,24 +1,33 @@
+import requests
+import re
+import os
+import sqlite3
+from services.Command import Command
+from services.Command import CommandService
+from services.Data import DataInitializer
+from services.Data import DataController
+
 from starlette.applications import Starlette
 from starlette.websockets import WebSocketDisconnect
 import json
 import logging
 import uvicorn
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+from datetime import datetime, timedelta
+from json import dumps, load, loads
 
-app = Starlette()
+from flask import Flask, render_template, Response, request
+
+app = Flask(__name__)
 
 websockets = {
     'web': {},
     'desktop': {},
 }
 
-
 async def receive_json(websocket):
     message = await websocket.receive_text()
     return json.loads(message)
-
 
 @app.websocket_route('/ws')
 async def websocket_endpoint(websocket):
@@ -58,5 +67,17 @@ async def websocket_endpoint(websocket):
     await websocket.close()
     logger.info(f'Client disconnected: {client_string}')
 
+
+@app.route('/', methods=['GET'])
+def index():
+    """Return the index.html page"""
+    return render_template('index.html')
+
+
+
 if __name__ == '__main__':
-    uvicorn.run(app, host='0.0.0.0', port=8000)
+    DataInitializer.initialize()
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port, debug=True)
+    
+    
