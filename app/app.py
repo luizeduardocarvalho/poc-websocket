@@ -16,7 +16,7 @@ from json import dumps, load, loads
 
 from flask import Flask, render_template, Response, request
 
-app = Flask(__name__)
+app = Starlette()
 
 websockets = {
     'web': {},
@@ -27,7 +27,7 @@ async def receive_json(websocket):
     message = await websocket.receive_text()
     return json.loads(message)
 
-@app.route('/ws')
+@app.websocket_route('/ws')
 async def websocket_endpoint(websocket):
     await websocket.accept()
 
@@ -41,13 +41,13 @@ async def websocket_endpoint(websocket):
     mirror_mode = 'web' if client_mode == 'desktop' else 'desktop'
 
     client_string = f'{client_id}[{client_mode}]'
-    logger.info(f'Client connected: {client_string}')
+    print(f'Client connected: {client_string}')
 
     while (True):
         try:
             # Wait for a message from the client
             message = await receive_json(websocket)
-            logger.debug(f'Message received from {client_string}: {message}')
+            print(f'Message received from {client_string}: {message}')
 
             try:
                 # Broadcast it to the mirror client
@@ -55,7 +55,7 @@ async def websocket_endpoint(websocket):
                     json.dumps(message)
                 )
             except KeyError:
-                logger.debug(
+                print(
                     f'Client {client_id}[{mirror_mode}] not connected'
                 )
         except WebSocketDisconnect:
@@ -63,7 +63,7 @@ async def websocket_endpoint(websocket):
 
     del websockets[client_mode][client_id]
     await websocket.close()
-    logger.info(f'Client disconnected: {client_string}')
+    print(f'Client disconnected: {client_string}')
 
 
 @app.route('/', methods=['GET'])
@@ -76,6 +76,6 @@ def index():
 if __name__ == '__main__':
     DataInitializer.initialize()
     port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    uvicorn.run(app, host='0.0.0.0', port=port, debug=True)
     
     
