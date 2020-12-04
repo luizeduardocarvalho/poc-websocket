@@ -1,62 +1,62 @@
-import requests
-import re
-import os
-import sqlite3
-from services.Command import Command
-from services.Command import CommandService
-from services.Data import DataInitializer
-from services.Data import DataController
+from starlette.applications import Starlette
+from starlette.websockets import WebSocketDisconnect
+import json
+import logging
+import uvicorn
 
-from datetime import datetime, timedelta
-from json import dumps, load, loads
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
-from flask import Flask, render_template, Response, request
+app = Starlette()
 
-app = Flask(__name__)
-
-
-@app.route('/', methods=['GET'])
-def index():
-    """Return the index.html page"""
-    return render_template('index.html')
+websockets = {
+    'web': {},
+    'desktop': {},
+}
 
 
-@app.route('/command', methods=['GET'])
-def getCommands():
-    data = CommandService.getCommands()
-
-    return Response(dumps(data), status=200, mimetype='application/json')
+async def receive_json(websocket):
+    message = await websocket.receive_text()
+    return json.loads(message)
 
 
-@app.route('/command', methods=['DELETE'])
-def deleteCommands():
-    DataController.deleteCommands()
+@app.websocket_route('/ws')
+async def websocket_endpoint(websocket):
+    await websocket.accept()
 
-    data = {"success": "true", "operation": "delete"}
+    # "Authentication" message
+    message = await receive_json(websocket)
+    client_mode = message['client_mode']
+    client_id = message['client_id']
+    websockets[client_mode][client_id] = websocket
 
-    return Response(dumps(data), status=200, mimetype='application/json')
+    # Get mirror mode to broadcast messages to the client on the other side
+    mirror_mode = 'web' if client_mode == 'desktop' else 'desktop'
 
+    client_string = f'{client_id}[{client_mode}]'
+    logger.info(f'Client connected: {client_string}')
 
-@app.route('/command', methods=['POST'])
-def postCommand():
-    print(request.json)
-    CommandService.pushCommand(request.json['name'])
+    while (True):
+        try:
+            # Wait for a message from the client
+            message = await receive_json(websocket)
+            logger.debug(f'Message received from {client_string}: {message}')
 
-    data = {"Hi there": "This is a sample response"}
-    return Response(dumps(data), status=200, mimetype='application/json')
+            try:
+                # Broadcast it to the mirror client
+                await websockets[mirror_mode][client_id].send_text(
+                    json.dumps(message)
+                )
+            except KeyError:
+                logger.debug(
+                    f'Client {client_id}[{mirror_mode}] not connected'
+                )
+        except WebSocketDisconnect:
+            break
 
-
-@app.route('/api/<string:variable>', methods=['GET'])
-def api_variable(variable):
-    """This is an api endpoint with a string variable as url parameter"""
-    data = {"You entered variable:": variable}
-    return Response(dumps(data), status=200, mimetype='application/json')
-    
+    del websockets[client_mode][client_id]
+    await websocket.close()
+    logger.info(f'Client disconnected: {client_string}')
 
 if __name__ == '__main__':
-    conn = sqlite3.connect('memory.db')
-    DataInitializer.initialize()
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port, debug=True)
-    
-    
+    uvicorn.run(app, host='0.0.0.0', port=8000)
