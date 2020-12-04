@@ -8,6 +8,4 @@ COPY ./app /app
 
 WORKDIR /app
 
-RUN pytest
-
 CMD [ "python", "app.py" ]
