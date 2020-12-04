@@ -1,4 +1,6 @@
 # Running Server Client
+
+Create an app on Heroku and execute the following commands:
 * heroku login
 * heroku container:login
 * heroku container:push web -\<heroku-app-name\>
