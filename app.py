@@ -4,6 +4,7 @@ from starlette.websockets import WebSocketDisconnect
 import json
 import logging
 import uvicorn
+import os
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -60,4 +61,5 @@ async def websocket_endpoint(websocket):
     logger.info(f'Client disconnected: {client_string}')
 
 if __name__ == '__main__':
-    uvicorn.run(app, host='0.0.0.0', port=8000)
+    port = int(os.environ.get("PORT", 5000))
+    uvicorn.run(app, host='0.0.0.0', port=port)
