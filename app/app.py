@@ -1,5 +1,3 @@
-import requests
-import re
 import os
 import sqlite3
 from services.Command import Command
@@ -29,7 +27,7 @@ async def receive_json(websocket):
     message = await websocket.receive_text()
     return json.loads(message)
 
-@app.websocket_route('/ws')
+@app.route('/ws')
 async def websocket_endpoint(websocket):
     await websocket.accept()
 
