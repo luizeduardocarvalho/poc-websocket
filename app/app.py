@@ -1,17 +1,9 @@
-import os
-from services.Command import Command
-from services.Command import CommandService
-from services.Data import DataInitializer
-from services.Data import DataController
-
 from starlette.applications import Starlette
 from starlette.websockets import WebSocketDisconnect
 import json
 import logging
 import uvicorn
-
-from datetime import datetime, timedelta
-from json import dumps, load, loads
+import os
 
 app = Starlette()
 
@@ -63,8 +55,7 @@ async def websocket_endpoint(websocket):
     print(f'Client disconnected: {client_string}')
 
 
-if __name__ == '__main__':
-    DataInitializer.initialize()
+if __name__ == '__main__':    
     port = int(os.environ.get("PORT", 5000))
     uvicorn.run(app, host='0.0.0.0', port=port, debug=True)
     
