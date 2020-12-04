@@ -1,5 +1,4 @@
 import os
-import sqlite3
 from services.Command import Command
 from services.Command import CommandService
 from services.Data import DataInitializer
@@ -13,8 +12,6 @@ import uvicorn
 
 from datetime import datetime, timedelta
 from json import dumps, load, loads
-
-from flask import Flask, render_template, Response, request
 
 app = Starlette()
 
@@ -64,13 +61,6 @@ async def websocket_endpoint(websocket):
     del websockets[client_mode][client_id]
     await websocket.close()
     print(f'Client disconnected: {client_string}')
-
-
-@app.route('/', methods=['GET'])
-def index():
-    """Return the index.html page"""
-    return render_template('index.html')
-
 
 
 if __name__ == '__main__':
