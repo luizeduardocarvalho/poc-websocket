@@ -1,9 +1,12 @@
+  
 from starlette.applications import Starlette
 from starlette.websockets import WebSocketDisconnect
 import json
 import logging
 import uvicorn
-import os
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 app = Starlette()
 
@@ -12,9 +15,11 @@ websockets = {
     'desktop': {},
 }
 
+
 async def receive_json(websocket):
     message = await websocket.receive_text()
     return json.loads(message)
+
 
 @app.websocket_route('/ws')
 async def websocket_endpoint(websocket):
@@ -30,13 +35,13 @@ async def websocket_endpoint(websocket):
     mirror_mode = 'web' if client_mode == 'desktop' else 'desktop'
 
     client_string = f'{client_id}[{client_mode}]'
-    print(f'Client connected: {client_string}')
+    logger.info(f'Client connected: {client_string}')
 
     while (True):
         try:
             # Wait for a message from the client
             message = await receive_json(websocket)
-            print(f'Message received from {client_string}: {message}')
+            logger.debug(f'Message received from {client_string}: {message}')
 
             try:
                 # Broadcast it to the mirror client
@@ -44,7 +49,7 @@ async def websocket_endpoint(websocket):
                     json.dumps(message)
                 )
             except KeyError:
-                print(
+                logger.debug(
                     f'Client {client_id}[{mirror_mode}] not connected'
                 )
         except WebSocketDisconnect:
@@ -52,11 +57,7 @@ async def websocket_endpoint(websocket):
 
     del websockets[client_mode][client_id]
     await websocket.close()
-    print(f'Client disconnected: {client_string}')
+    logger.info(f'Client disconnected: {client_string}')
 
-
-if __name__ == '__main__':    
-    port = int(os.environ.get("PORT", 5000))
-    uvicorn.run(app, host='0.0.0.0', port=port, debug=True)
-    
-    
+if __name__ == '__main__':
+    uvicorn.run(app, host='0.0.0.0', port=8000)
